@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Employee Management System</title>
+  <style>
+  body 
+  {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background-color: #fff5f5  ; /* Light grey background */
+  }    
+    h1 
+    { color: #333; }
+    input, button { margin: 5px; padding: 8px; }
+    table { margin-top: 20px; border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+  </style>
+</head>
+<body>
+
+  <h1 style="text-align: center; ">Employee Management System</h1>
+
+  <h3 style="text-align: center; ">Add / Update Employee</h3>
+  <div style="text-align: center;">
+
+  <input type="number" id="empId" placeholder="ID">
+  <input type="text" id="empName" placeholder="Name">
+  <input type="text" id="empDept" placeholder="Department">
+  <button onclick="addOrUpdateEmployee()">Submit</button>
+  </div>
+  <h3>Employee List</h3>
+  <button onclick="fetchEmployees()">Refresh List</button>
+
+  <table id="employeeTable">
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Department</th><th>Actions</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API = 'http://localhost:8080/employees';
+
+    async function fetchEmployees() {
+      const res = await fetch(`${API}/all`);
+      const data = await res.json();
+      const tableBody = document.querySelector('#employeeTable tbody');
+      tableBody.innerHTML = '';
+
+      data.forEach(emp => {
+        const row = `
+          <tr>
+            <td>${emp.id}</td>
+            <td>${emp.name}</td>
+            <td>${emp.department}</td>
+            <td>
+              <button onclick="loadEmployee(${emp.id}, '${emp.name}', '${emp.department}')">Edit</button>
+              <button onclick="deleteEmployee(${emp.id})">Delete</button>
+            </td>
+          </tr>`;
+        tableBody.innerHTML += row;
+      });
+    }
+
+    function loadEmployee(id, name, dept) {
+      document.getElementById('empId').value = id;
+      document.getElementById('empName').value = name;
+      document.getElementById('empDept').value = dept;
+    }
+
+    async function addOrUpdateEmployee() {
+      const id = document.getElementById('empId').value;
+      const name = document.getElementById('empName').value;
+      const dept = document.getElementById('empDept').value;
+
+      const payload = { id: parseInt(id), name, department: dept };
+
+      // Try to update first
+      const updateRes = await fetch(`${API}/update/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const updateMsg = await updateRes.text();
+      if (updateMsg === 'Employee not found') {
+        // If not found, add new
+        await fetch(`${API}/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      fetchEmployees();
+      clearForm();
+    }
+
+    async function deleteEmployee(id) {
+      await fetch(`${API}/delete/${id}`, { method: 'DELETE' });
+      fetchEmployees();
+    }
+
+    function clearForm() {
+      document.getElementById('empId').value = '';
+      document.getElementById('empName').value = '';
+      document.getElementById('empDept').value = '';
+    }
+
+    fetchEmployees(); // Load on page start
+  </script>
+
+</body>
+</html>
